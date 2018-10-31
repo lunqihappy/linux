@@ -1,19 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /******************************************************************************
  *
  * Copyright(c) 2007 - 2010 Realtek Corporation. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of version 2 of the GNU General Public License as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  * Modifications for inclusion into the Linux staging tree are
  * Copyright(c) 2010 Larry Finger. All rights reserved.
@@ -376,7 +364,8 @@ void r8712_SwitchBandwidth(struct _adapter *pAdapter)
 		/* Use PHY_REG.txt default value. Do not need to change.
 		 * Correct the tx power for CCK rate in 40M.
 		 * Set Control channel to upper or lower. These settings are
-		 * required only for 40MHz */
+		 * required only for 40MHz
+		 */
 		set_bb_reg(pAdapter, rCCK0_System, bCCKSideBand,
 			   (HAL_PRIME_CHNL_OFFSET_DONT_CARE >> 1));
 		set_bb_reg(pAdapter, rOFDM1_LSTF, 0xC00,
@@ -540,7 +529,7 @@ void r8712_SetSingleCarrierTx(struct _adapter *pAdapter, u8 bStart)
 
 void r8712_SetSingleToneTx(struct _adapter *pAdapter, u8 bStart)
 {
-	u8 rfPath = pAdapter->mppriv.curr_rfpath;
+	u8 rfPath;
 
 	switch (pAdapter->mppriv.antenna_tx) {
 	case ANTENNA_B:

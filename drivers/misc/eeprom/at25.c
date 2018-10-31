@@ -94,15 +94,17 @@ static int at25_ee_read(void *priv, unsigned int offset,
 	switch (at25->addrlen) {
 	default:	/* case 3 */
 		*cp++ = offset >> 16;
+		/* fall through */
 	case 2:
 		*cp++ = offset >> 8;
+		/* fall through */
 	case 1:
 	case 0:	/* can't happen: for better codegen */
 		*cp++ = offset >> 0;
 	}
 
 	spi_message_init(&m);
-	memset(t, 0, sizeof t);
+	memset(t, 0, sizeof(t));
 
 	t[0].tx_buf = command;
 	t[0].len = at25->addrlen + 1;
@@ -121,9 +123,8 @@ static int at25_ee_read(void *priv, unsigned int offset,
 	 * this chip is clocked very slowly
 	 */
 	status = spi_sync(at25->spi, &m);
-	dev_dbg(&at25->spi->dev,
-		"read %Zd bytes at %d --> %d\n",
-		count, offset, (int) status);
+	dev_dbg(&at25->spi->dev, "read %zu bytes at %d --> %zd\n",
+		count, offset, status);
 
 	mutex_unlock(&at25->lock);
 	return status;
@@ -167,8 +168,7 @@ static int at25_ee_write(void *priv, unsigned int off, void *val, size_t count)
 		*cp = AT25_WREN;
 		status = spi_write(at25->spi, cp, 1);
 		if (status < 0) {
-			dev_dbg(&at25->spi->dev, "WREN --> %d\n",
-					(int) status);
+			dev_dbg(&at25->spi->dev, "WREN --> %d\n", status);
 			break;
 		}
 
@@ -182,8 +182,10 @@ static int at25_ee_write(void *priv, unsigned int off, void *val, size_t count)
 		switch (at25->addrlen) {
 		default:	/* case 3 */
 			*cp++ = offset >> 16;
+			/* fall through */
 		case 2:
 			*cp++ = offset >> 8;
+			/* fall through */
 		case 1:
 		case 0:	/* can't happen: for better codegen */
 			*cp++ = offset >> 0;
@@ -196,9 +198,8 @@ static int at25_ee_write(void *priv, unsigned int off, void *val, size_t count)
 		memcpy(cp, buf, segment);
 		status = spi_write(at25->spi, bounce,
 				segment + at25->addrlen + 1);
-		dev_dbg(&at25->spi->dev,
-				"write %u bytes at %u --> %d\n",
-				segment, offset, (int) status);
+		dev_dbg(&at25->spi->dev, "write %u bytes at %u --> %d\n",
+			segment, offset, status);
 		if (status < 0)
 			break;
 
@@ -225,8 +226,7 @@ static int at25_ee_write(void *priv, unsigned int off, void *val, size_t count)
 
 		if ((sr < 0) || (sr & AT25_SR_nRDY)) {
 			dev_err(&at25->spi->dev,
-				"write %d bytes offset %d, "
-				"timeout after %u msecs\n",
+				"write %u bytes offset %u, timeout after %u msecs\n",
 				segment, offset,
 				jiffies_to_msecs(jiffies -
 					(timeout - EE_TIMEOUT)));
@@ -280,6 +280,9 @@ static int at25_fw_to_chip(struct device *dev, struct spi_eeprom *chip)
 			return -ENODEV;
 		}
 		switch (val) {
+		case 9:
+			chip->flags |= EE_INSTR_BIT3_IS_ADDR;
+			/* fall through */
 		case 8:
 			chip->flags |= EE_ADDR1;
 			break;
@@ -363,28 +366,16 @@ static int at25_probe(struct spi_device *spi)
 	at25->nvmem_config.word_size = 1;
 	at25->nvmem_config.size = chip.byte_len;
 
-	at25->nvmem = nvmem_register(&at25->nvmem_config);
+	at25->nvmem = devm_nvmem_register(&spi->dev, &at25->nvmem_config);
 	if (IS_ERR(at25->nvmem))
 		return PTR_ERR(at25->nvmem);
 
 	dev_info(&spi->dev, "%d %s %s eeprom%s, pagesize %u\n",
-		(chip.byte_len < 1024)
-			? chip.byte_len
-			: (chip.byte_len / 1024),
+		(chip.byte_len < 1024) ? chip.byte_len : (chip.byte_len / 1024),
 		(chip.byte_len < 1024) ? "Byte" : "KByte",
 		at25->chip.name,
 		(chip.flags & EE_READONLY) ? " (readonly)" : "",
 		at25->chip.page_size);
-	return 0;
-}
-
-static int at25_remove(struct spi_device *spi)
-{
-	struct at25_data	*at25;
-
-	at25 = spi_get_drvdata(spi);
-	nvmem_unregister(at25->nvmem);
-
 	return 0;
 }
 
@@ -402,7 +393,6 @@ static struct spi_driver at25_driver = {
 		.of_match_table = at25_of_match,
 	},
 	.probe		= at25_probe,
-	.remove		= at25_remove,
 };
 
 module_spi_driver(at25_driver);

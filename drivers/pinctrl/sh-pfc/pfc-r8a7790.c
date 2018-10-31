@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * R8A7790 processor support
  *
@@ -5,26 +6,11 @@
  * Copyright (C) 2013  Magnus Damm
  * Copyright (C) 2012  Renesas Solutions Corp.
  * Copyright (C) 2012  Kuninori Morimoto <kuninori.morimoto.gx@renesas.com>
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; version 2 of the
- * License.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include <linux/io.h>
 #include <linux/kernel.h>
 
-#include "core.h"
 #include "sh_pfc.h"
 
 /*
@@ -1836,8 +1822,8 @@ static const unsigned int avb_mii_pins[] = {
 	RCAR_GP_PIN(2, 2),
 
 	RCAR_GP_PIN(2, 7), RCAR_GP_PIN(2, 8), RCAR_GP_PIN(2, 9),
-	RCAR_GP_PIN(2, 10), RCAR_GP_PIN(3, 8), RCAR_GP_PIN(3, 10),
-	RCAR_GP_PIN(3, 12),
+	RCAR_GP_PIN(2, 10), RCAR_GP_PIN(3, 8), RCAR_GP_PIN(3, 9),
+	RCAR_GP_PIN(3, 10), RCAR_GP_PIN(3, 12),
 };
 static const unsigned int avb_mii_mux[] = {
 	AVB_TXD0_MARK, AVB_TXD1_MARK, AVB_TXD2_MARK,
@@ -1847,8 +1833,8 @@ static const unsigned int avb_mii_mux[] = {
 	AVB_RXD3_MARK,
 
 	AVB_RX_ER_MARK, AVB_RX_CLK_MARK, AVB_RX_DV_MARK,
-	AVB_CRS_MARK, AVB_TX_EN_MARK, AVB_TX_CLK_MARK,
-	AVB_COL_MARK,
+	AVB_CRS_MARK, AVB_TX_EN_MARK, AVB_TX_ER_MARK,
+	AVB_TX_CLK_MARK, AVB_COL_MARK,
 };
 static const unsigned int avb_gmii_pins[] = {
 	RCAR_GP_PIN(0, 8), RCAR_GP_PIN(0, 9), RCAR_GP_PIN(0, 10),
@@ -4696,47 +4682,6 @@ static const char * const vin3_groups[] = {
 	"vin3_clk",
 };
 
-#define IOCTRL6 0x8c
-
-static int r8a7790_get_io_voltage(struct sh_pfc *pfc, unsigned int pin)
-{
-	u32 data, mask;
-
-	if (WARN(pin < RCAR_GP_PIN(3, 0) || pin > RCAR_GP_PIN(3, 31), "invalid pin %#x", pin))
-		return -EINVAL;
-
-	data = ioread32(pfc->windows->virt + IOCTRL6),
-	/* Bits in IOCTRL6 are numbered in opposite order to pins */
-	mask = 0x80000000 >> (pin & 0x1f);
-
-	return (data & mask) ? 3300 : 1800;
-}
-
-static int r8a7790_set_io_voltage(struct sh_pfc *pfc, unsigned int pin, u16 mV)
-{
-	u32 data, mask;
-
-	if (WARN(pin < RCAR_GP_PIN(3, 0) || pin > RCAR_GP_PIN(3, 31), "invalid pin %#x", pin))
-		return -EINVAL;
-
-	if (mV != 1800 && mV != 3300)
-		return -EINVAL;
-
-	data = ioread32(pfc->windows->virt + IOCTRL6);
-	/* Bits in IOCTRL6 are numbered in opposite order to pins */
-	mask = 0x80000000 >> (pin & 0x1f);
-
-	if (mV == 3300)
-		data |= mask;
-	else
-		data &= ~mask;
-
-	iowrite32(~data, pfc->windows->virt); /* unlock reg */
-	iowrite32(data, pfc->windows->virt + IOCTRL6);
-
-	return 0;
-}
-
 static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(audio_clk),
 	SH_PFC_FUNCTION(avb),
@@ -5736,14 +5681,23 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 	{ },
 };
 
-static const struct sh_pfc_soc_operations pinmux_ops = {
-	.get_io_voltage = r8a7790_get_io_voltage,
-	.set_io_voltage = r8a7790_set_io_voltage,
+static int r8a7790_pin_to_pocctrl(struct sh_pfc *pfc, unsigned int pin, u32 *pocctrl)
+{
+	if (pin < RCAR_GP_PIN(3, 0) || pin > RCAR_GP_PIN(3, 31))
+		return -EINVAL;
+
+	*pocctrl = 0xe606008c;
+
+	return 31 - (pin & 0x1f);
+}
+
+static const struct sh_pfc_soc_operations r8a7790_pinmux_ops = {
+	.pin_to_pocctrl = r8a7790_pin_to_pocctrl,
 };
 
 const struct sh_pfc_soc_info r8a7790_pinmux_info = {
 	.name = "r8a77900_pfc",
-	.ops = &pinmux_ops,
+	.ops = &r8a7790_pinmux_ops,
 	.unlock_reg = 0xe6060000, /* PMMR */
 
 	.function = { PINMUX_FUNCTION_BEGIN, PINMUX_FUNCTION_END },

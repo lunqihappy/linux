@@ -1,15 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  *  Nano River Technologies viperboard GPIO lib driver
  *
  *  (C) 2012 by Lemonage GmbH
  *  Author: Lars Poeschel <poeschel@lemonage.de>
  *  All rights reserved.
- *
- *  This program is free software; you can redistribute  it and/or modify it
- *  under  the terms of  the GNU General  Public License as published by the
- *  Free Software Foundation;  either version 2 of the	License, or (at your
- *  option) any later version.
- *
  */
 
 #include <linux/kernel.h>
@@ -19,9 +14,8 @@
 #include <linux/types.h>
 #include <linux/mutex.h>
 #include <linux/platform_device.h>
-
 #include <linux/usb.h>
-#include <linux/gpio.h>
+#include <linux/gpio/driver.h>
 
 #include <linux/mfd/viperboard.h>
 
@@ -440,7 +434,6 @@ static int vprbrd_gpio_probe(struct platform_device *pdev)
 
 static struct platform_driver vprbrd_gpio_driver = {
 	.driver.name	= "viperboard-gpio",
-	.driver.owner	= THIS_MODULE,
 	.probe		= vprbrd_gpio_probe,
 };
 

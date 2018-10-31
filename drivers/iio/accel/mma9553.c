@@ -987,7 +987,6 @@ static const struct iio_chan_spec mma9553_channels[] = {
 };
 
 static const struct iio_info mma9553_info = {
-	.driver_module = THIS_MODULE,
 	.read_raw = mma9553_read_raw,
 	.write_raw = mma9553_write_raw,
 	.read_event_config = mma9553_read_event_config,
@@ -1001,7 +1000,7 @@ static irqreturn_t mma9553_irq_handler(int irq, void *private)
 	struct iio_dev *indio_dev = private;
 	struct mma9553_data *data = iio_priv(indio_dev);
 
-	data->timestamp = iio_get_time_ns();
+	data->timestamp = iio_get_time_ns(indio_dev);
 	/*
 	 * Since we only configure the interrupt pin when an
 	 * event is enabled, we are sure we have at least

@@ -97,7 +97,8 @@ static irqreturn_t mma7455_trigger_handler(int irq, void *p)
 	if (ret)
 		goto done;
 
-	iio_push_to_buffers_with_timestamp(indio_dev, buf, iio_get_time_ns());
+	iio_push_to_buffers_with_timestamp(indio_dev, buf,
+					   iio_get_time_ns(indio_dev));
 
 done:
 	iio_trigger_notify_done(indio_dev->trig);
@@ -198,7 +199,6 @@ static const struct iio_info mma7455_info = {
 	.attrs = &mma7455_group,
 	.read_raw = mma7455_read_raw,
 	.write_raw = mma7455_write_raw,
-	.driver_module = THIS_MODULE,
 };
 
 #define MMA7455_CHANNEL(axis, idx) { \

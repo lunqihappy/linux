@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 #ifndef __ASM_SECCOMP_H
 
 #include <linux/unistd.h>
@@ -16,10 +17,10 @@ static inline const int *get_compat_mode1_syscalls(void)
 		0, /* null terminated */
 	};
 
-	if (config_enabled(CONFIG_MIPS32_O32) && test_thread_flag(TIF_32BIT_REGS))
+	if (IS_ENABLED(CONFIG_MIPS32_O32) && test_thread_flag(TIF_32BIT_REGS))
 		return syscalls_O32;
 
-	if (config_enabled(CONFIG_MIPS32_N32))
+	if (IS_ENABLED(CONFIG_MIPS32_N32))
 		return syscalls_N32;
 
 	BUG();

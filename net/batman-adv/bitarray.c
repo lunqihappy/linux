@@ -1,4 +1,5 @@
-/* Copyright (C) 2006-2016  B.A.T.M.A.N. contributors:
+// SPDX-License-Identifier: GPL-2.0
+/* Copyright (C) 2006-2018  B.A.T.M.A.N. contributors:
  *
  * Simon Wunderlich, Marek Lindner
  *
@@ -20,6 +21,8 @@
 
 #include <linux/bitmap.h>
 
+#include "log.h"
+
 /* shift the packet array by n places. */
 static void batadv_bitmap_shift_left(unsigned long *seq_bits, s32 n)
 {
@@ -30,7 +33,7 @@ static void batadv_bitmap_shift_left(unsigned long *seq_bits, s32 n)
 }
 
 /**
- * batadv_bit_get_packet - receive and process one packet within the sequence
+ * batadv_bit_get_packet() - receive and process one packet within the sequence
  *  number window
  * @priv: the bat priv with all the soft interface information
  * @seq_bits: pointer to the sequence number receive packet

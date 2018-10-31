@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 #include <linux/mm.h>
 #include <linux/hugetlb.h>
 #include <asm/pgtable.h>
@@ -5,39 +6,34 @@
 #include <asm/cacheflush.h>
 #include <asm/machdep.h>
 #include <asm/mman.h>
+#include <asm/tlb.h>
 
 void radix__flush_hugetlb_page(struct vm_area_struct *vma, unsigned long vmaddr)
 {
-	unsigned long ap, shift;
+	int psize;
 	struct hstate *hstate = hstate_file(vma->vm_file);
 
-	shift = huge_page_shift(hstate);
-	if (shift == mmu_psize_defs[MMU_PAGE_2M].shift)
-		ap = mmu_get_ap(MMU_PAGE_2M);
-	else if (shift == mmu_psize_defs[MMU_PAGE_1G].shift)
-		ap = mmu_get_ap(MMU_PAGE_1G);
-	else {
-		WARN(1, "Wrong huge page shift\n");
-		return ;
-	}
-	radix___flush_tlb_page(vma->vm_mm, vmaddr, ap, 0);
+	psize = hstate_get_psize(hstate);
+	radix__flush_tlb_page_psize(vma->vm_mm, vmaddr, psize);
 }
 
 void radix__local_flush_hugetlb_page(struct vm_area_struct *vma, unsigned long vmaddr)
 {
-	unsigned long ap, shift;
+	int psize;
 	struct hstate *hstate = hstate_file(vma->vm_file);
 
-	shift = huge_page_shift(hstate);
-	if (shift == mmu_psize_defs[MMU_PAGE_2M].shift)
-		ap = mmu_get_ap(MMU_PAGE_2M);
-	else if (shift == mmu_psize_defs[MMU_PAGE_1G].shift)
-		ap = mmu_get_ap(MMU_PAGE_1G);
-	else {
-		WARN(1, "Wrong huge page shift\n");
-		return ;
-	}
-	radix___local_flush_tlb_page(vma->vm_mm, vmaddr, ap, 0);
+	psize = hstate_get_psize(hstate);
+	radix__local_flush_tlb_page_psize(vma->vm_mm, vmaddr, psize);
+}
+
+void radix__flush_hugetlb_tlb_range(struct vm_area_struct *vma, unsigned long start,
+				   unsigned long end)
+{
+	int psize;
+	struct hstate *hstate = hstate_file(vma->vm_file);
+
+	psize = hstate_get_psize(hstate);
+	radix__flush_tlb_range_psize(vma->vm_mm, start, end, psize);
 }
 
 /*
@@ -53,14 +49,22 @@ radix__hugetlb_get_unmapped_area(struct file *file, unsigned long addr,
 	struct mm_struct *mm = current->mm;
 	struct vm_area_struct *vma;
 	struct hstate *h = hstate_file(file);
+	int fixed = (flags & MAP_FIXED);
+	unsigned long high_limit;
 	struct vm_unmapped_area_info info;
+
+	high_limit = DEFAULT_MAP_WINDOW;
+	if (addr >= high_limit || (fixed && (addr + len > high_limit)))
+		high_limit = TASK_SIZE;
 
 	if (len & ~huge_page_mask(h))
 		return -EINVAL;
-	if (len > TASK_SIZE)
+	if (len > high_limit)
 		return -ENOMEM;
 
-	if (flags & MAP_FIXED) {
+	if (fixed) {
+		if (addr > high_limit - len)
+			return -ENOMEM;
 		if (prepare_hugepage_range(file, addr, len))
 			return -EINVAL;
 		return addr;
@@ -69,8 +73,8 @@ radix__hugetlb_get_unmapped_area(struct file *file, unsigned long addr,
 	if (addr) {
 		addr = ALIGN(addr, huge_page_size(h));
 		vma = find_vma(mm, addr);
-		if (TASK_SIZE - len >= addr &&
-		    (!vma || addr + len <= vma->vm_start))
+		if (high_limit - len >= addr &&
+		    (!vma || addr + len <= vm_start_gap(vma)))
 			return addr;
 	}
 	/*
@@ -80,8 +84,9 @@ radix__hugetlb_get_unmapped_area(struct file *file, unsigned long addr,
 	info.flags = VM_UNMAPPED_AREA_TOPDOWN;
 	info.length = len;
 	info.low_limit = PAGE_SIZE;
-	info.high_limit = current->mm->mmap_base;
+	info.high_limit = mm->mmap_base + (high_limit - DEFAULT_MAP_WINDOW);
 	info.align_mask = PAGE_MASK & ~huge_page_mask(h);
 	info.align_offset = 0;
+
 	return vm_unmapped_area(&info);
 }

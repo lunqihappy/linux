@@ -26,8 +26,8 @@
 #include <linux/math64.h>
 #include <linux/bitops.h>
 
-#include "dvb_frontend.h"
-#include "dvb_math.h"
+#include <media/dvb_frontend.h>
+#include <media/dvb_math.h>
 #include "rtl2832.h"
 
 struct rtl2832_dev {
@@ -44,6 +44,7 @@ struct rtl2832_dev {
 	bool sleeping;
 	struct delayed_work i2c_gate_work;
 	unsigned long filters; /* PID filter */
+	bool slave_ts;
 };
 
 struct rtl2832_reg_entry {

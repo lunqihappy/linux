@@ -10,7 +10,7 @@
  */
 
 /* #define DEBUG */
-#define pr_fmt(fmt) "ACPI : AML: " fmt
+#define pr_fmt(fmt) "ACPI: AML: " fmt
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -602,7 +602,7 @@ static int acpi_aml_read_user(char __user *buf, int len)
 	crc->tail = (crc->tail + n) & (ACPI_AML_BUF_SIZE - 1);
 	ret = n;
 out:
-	acpi_aml_unlock_fifo(ACPI_AML_OUT_USER, !ret);
+	acpi_aml_unlock_fifo(ACPI_AML_OUT_USER, ret >= 0);
 	return ret;
 }
 
@@ -672,7 +672,7 @@ static int acpi_aml_write_user(const char __user *buf, int len)
 	crc->head = (crc->head + n) & (ACPI_AML_BUF_SIZE - 1);
 	ret = n;
 out:
-	acpi_aml_unlock_fifo(ACPI_AML_IN_USER, !ret);
+	acpi_aml_unlock_fifo(ACPI_AML_IN_USER, ret >= 0);
 	return n;
 }
 
@@ -718,15 +718,15 @@ again:
 	return size > 0 ? size : ret;
 }
 
-static unsigned int acpi_aml_poll(struct file *file, poll_table *wait)
+static __poll_t acpi_aml_poll(struct file *file, poll_table *wait)
 {
-	int masks = 0;
+	__poll_t masks = 0;
 
 	poll_wait(file, &acpi_aml_io.wait, wait);
 	if (acpi_aml_user_readable())
-		masks |= POLLIN | POLLRDNORM;
+		masks |= EPOLLIN | EPOLLRDNORM;
 	if (acpi_aml_user_writable())
-		masks |= POLLOUT | POLLWRNORM;
+		masks |= EPOLLOUT | EPOLLWRNORM;
 
 	return masks;
 }

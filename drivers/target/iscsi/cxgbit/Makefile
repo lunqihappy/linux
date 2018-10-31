@@ -1,4 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0
 ccflags-y := -Idrivers/net/ethernet/chelsio/cxgb4
+ccflags-y += -Idrivers/net/ethernet/chelsio/libcxgb
 ccflags-y += -Idrivers/target/iscsi
 
 obj-$(CONFIG_ISCSI_TARGET_CXGB4)  += cxgbit.o

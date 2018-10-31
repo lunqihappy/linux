@@ -435,36 +435,16 @@ snic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	 * limitation for the device. Try 43-bit first, and
 	 * fail to 32-bit.
 	 */
-	ret = pci_set_dma_mask(pdev, DMA_BIT_MASK(43));
+	ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(43));
 	if (ret) {
-		ret = pci_set_dma_mask(pdev, DMA_BIT_MASK(32));
+		ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
 		if (ret) {
 			SNIC_HOST_ERR(shost,
 				      "No Usable DMA Configuration, aborting %d\n",
 				      ret);
-
-			goto err_rel_regions;
-		}
-
-		ret = pci_set_consistent_dma_mask(pdev, DMA_BIT_MASK(32));
-		if (ret) {
-			SNIC_HOST_ERR(shost,
-				      "Unable to obtain 32-bit DMA for consistent allocations, aborting: %d\n",
-				      ret);
-
-			goto err_rel_regions;
-		}
-	} else {
-		ret = pci_set_consistent_dma_mask(pdev, DMA_BIT_MASK(43));
-		if (ret) {
-			SNIC_HOST_ERR(shost,
-				      "Unable to obtain 43-bit DMA for consistent allocations. aborting: %d\n",
-				      ret);
-
 			goto err_rel_regions;
 		}
 	}
-
 
 	/* Map vNIC resources from BAR0 */
 	if (!(pci_resource_flags(pdev, 0) & IORESOURCE_MEM)) {
@@ -591,6 +571,7 @@ snic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	if (!pool) {
 		SNIC_HOST_ERR(shost, "dflt sgl pool creation failed\n");
 
+		ret = -ENOMEM;
 		goto err_free_res;
 	}
 
@@ -601,6 +582,7 @@ snic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	if (!pool) {
 		SNIC_HOST_ERR(shost, "max sgl pool creation failed\n");
 
+		ret = -ENOMEM;
 		goto err_free_dflt_sgl_pool;
 	}
 
@@ -611,6 +593,7 @@ snic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	if (!pool) {
 		SNIC_HOST_ERR(shost, "snic tmreq info pool creation failed.\n");
 
+		ret = -ENOMEM;
 		goto err_free_max_sgl_pool;
 	}
 

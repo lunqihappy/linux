@@ -22,7 +22,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/ktime.h>
 #include <linux/init.h>
@@ -263,6 +262,8 @@ void proc_coredump_connector(struct task_struct *task)
 	ev->what = PROC_EVENT_COREDUMP;
 	ev->event_data.coredump.process_pid = task->pid;
 	ev->event_data.coredump.process_tgid = task->tgid;
+	ev->event_data.coredump.parent_pid = task->real_parent->pid;
+	ev->event_data.coredump.parent_tgid = task->real_parent->tgid;
 
 	memcpy(&msg->id, &cn_proc_event_id, sizeof(msg->id));
 	msg->ack = 0; /* not used */
@@ -289,6 +290,8 @@ void proc_exit_connector(struct task_struct *task)
 	ev->event_data.exit.process_tgid = task->tgid;
 	ev->event_data.exit.exit_code = task->exit_code;
 	ev->event_data.exit.exit_signal = task->exit_signal;
+	ev->event_data.exit.parent_pid = task->real_parent->pid;
+	ev->event_data.exit.parent_tgid = task->real_parent->tgid;
 
 	memcpy(&msg->id, &cn_proc_event_id, sizeof(msg->id));
 	msg->ack = 0; /* not used */
@@ -390,5 +393,4 @@ static int __init cn_proc_init(void)
 	}
 	return 0;
 }
-
-module_init(cn_proc_init);
+device_initcall(cn_proc_init);

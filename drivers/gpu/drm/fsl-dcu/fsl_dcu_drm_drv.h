@@ -12,6 +12,8 @@
 #ifndef __FSL_DCU_DRM_DRV_H__
 #define __FSL_DCU_DRM_DRV_H__
 
+#include <drm/drm_encoder.h>
+
 #include "fsl_dcu_drm_crtc.h"
 #include "fsl_dcu_drm_output.h"
 #include "fsl_dcu_drm_plane.h"
@@ -175,6 +177,7 @@ struct fsl_dcu_soc_data {
 	unsigned int total_layer;
 	/*max layer number DCU supported*/
 	unsigned int max_layer;
+	unsigned int layer_regs;
 };
 
 struct fsl_dcu_drm_device {
@@ -195,7 +198,6 @@ struct fsl_dcu_drm_device {
 	const struct fsl_dcu_soc_data *soc;
 };
 
-void fsl_dcu_fbdev_init(struct drm_device *dev);
 int fsl_dcu_drm_modeset_init(struct fsl_dcu_drm_device *fsl_dev);
 
 #endif /* __FSL_DCU_DRM_DRV_H__ */

@@ -25,7 +25,7 @@
 #include <linux/spinlock.h>
 #include <linux/platform_device.h>
 #include <linux/pci.h>
-#include <linux/gpio.h>
+#include <linux/gpio/driver.h>
 #include <linux/mfd/rdc321x.h>
 #include <linux/slab.h>
 
@@ -200,7 +200,6 @@ static int rdc321x_gpio_probe(struct platform_device *pdev)
 
 static struct platform_driver rdc321x_gpio_driver = {
 	.driver.name	= "rdc321x-gpio",
-	.driver.owner	= THIS_MODULE,
 	.probe		= rdc321x_gpio_probe,
 };
 

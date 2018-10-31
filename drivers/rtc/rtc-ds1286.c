@@ -16,7 +16,7 @@
 #include <linux/rtc.h>
 #include <linux/platform_device.h>
 #include <linux/bcd.h>
-#include <linux/ds1286.h>
+#include <linux/rtc/ds1286.h>
 #include <linux/io.h>
 #include <linux/slab.h>
 
@@ -211,7 +211,7 @@ static int ds1286_read_time(struct device *dev, struct rtc_time *tm)
 
 	tm->tm_mon--;
 
-	return rtc_valid_tm(tm);
+	return 0;
 }
 
 static int ds1286_set_time(struct device *dev, struct rtc_time *tm)

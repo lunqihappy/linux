@@ -27,6 +27,7 @@ Required properties:
                          brcm,brcmnand-v6.2
                          brcm,brcmnand-v7.0
                          brcm,brcmnand-v7.1
+                         brcm,brcmnand-v7.2
                          brcm,brcmnand
 - reg              : the register start and length for NAND register region.
                      (optional) Flash DMA register range (if present)
@@ -41,7 +42,6 @@ Required properties:
                      May be "nand", if the SoC has the individual NAND
                      interrupts multiplexed behind another custom piece of
                      hardware
-- interrupt-parent : See standard interrupt bindings
 - #address-cells   : <1> - subnodes give the chip-select number
 - #size-cells      : <0>
 

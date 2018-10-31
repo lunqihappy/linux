@@ -20,7 +20,7 @@
 #include <linux/pinctrl/pinconf-generic.h>
 #include <linux/slab.h>
 #include <linux/regmap.h>
-#include <linux/gpio.h>
+#include <linux/gpio/driver.h>
 #include <linux/interrupt.h>
 #include <linux/of_device.h>
 #include <linux/of_irq.h>
@@ -643,7 +643,7 @@ static void pm8xxx_mpp_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 #define pm8xxx_mpp_dbg_show NULL
 #endif
 
-static struct gpio_chip pm8xxx_mpp_template = {
+static const struct gpio_chip pm8xxx_mpp_template = {
 	.direction_input = pm8xxx_mpp_direction_input,
 	.direction_output = pm8xxx_mpp_direction_output,
 	.get = pm8xxx_mpp_get,
@@ -744,6 +744,7 @@ static int pm8xxx_pin_populate(struct pm8xxx_mpp *pctrl,
 static const struct of_device_id pm8xxx_mpp_of_match[] = {
 	{ .compatible = "qcom,pm8018-mpp" },
 	{ .compatible = "qcom,pm8038-mpp" },
+	{ .compatible = "qcom,pm8058-mpp" },
 	{ .compatible = "qcom,pm8917-mpp" },
 	{ .compatible = "qcom,pm8821-mpp" },
 	{ .compatible = "qcom,pm8921-mpp" },

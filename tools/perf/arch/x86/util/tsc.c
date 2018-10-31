@@ -1,6 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0
 #include <stdbool.h>
 #include <errno.h>
 
+#include <linux/stddef.h>
 #include <linux/perf_event.h>
 
 #include "../../perf.h"
@@ -62,6 +64,8 @@ int perf_event__synth_time_conv(const struct perf_event_mmap_page *pc,
 	struct perf_tsc_conversion tc;
 	int err;
 
+	if (!pc)
+		return 0;
 	err = perf_read_tsc_conversion(pc, &tc);
 	if (err == -EOPNOTSUPP)
 		return 0;

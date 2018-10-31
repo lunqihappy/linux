@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 #include "perf.h"
 #include "util/debug.h"
+#include "util/event.h"
 #include "util/symbol.h"
 #include "util/sort.h"
 #include "util/evsel.h"
@@ -9,6 +11,7 @@
 #include "util/parse-events.h"
 #include "tests/tests.h"
 #include "tests/hists_common.h"
+#include <linux/kernel.h>
 
 struct sample {
 	u32 pid;
@@ -216,6 +219,8 @@ static int do_test(struct hists *hists, struct result *expected, size_t nr_expec
 
 		/* check callchain entries */
 		root = &he->callchain->node.rb_root;
+
+		TEST_ASSERT_VAL("callchains expected", !RB_EMPTY_ROOT(root));
 		cnode = rb_entry(rb_first(root), struct callchain_node, rb_node);
 
 		c = 0;
@@ -666,6 +671,8 @@ static int test4(struct perf_evsel *evsel, struct machine *machine)
 	perf_evsel__set_sample_bit(evsel, CALLCHAIN);
 
 	setup_sorting(NULL);
+
+	callchain_param = callchain_param_default;
 	callchain_register_param(&callchain_param);
 
 	err = add_hist_entries(hists, machine);
@@ -681,7 +688,7 @@ out:
 	return err;
 }
 
-int test__hists_cumulate(int subtest __maybe_unused)
+int test__hists_cumulate(struct test *test __maybe_unused, int subtest __maybe_unused)
 {
 	int err = TEST_FAIL;
 	struct machines machines;

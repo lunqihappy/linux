@@ -35,9 +35,6 @@ static struct clk *__of_clk_get(struct device_node *np, int index,
 	struct clk *clk;
 	int rc;
 
-	if (index < 0)
-		return ERR_PTR(-EINVAL);
-
 	rc = of_parse_phandle_with_args(np, "clocks", "#clock-cells", index,
 					&clkspec);
 	if (rc)
@@ -77,8 +74,8 @@ static struct clk *__of_clk_get_by_name(struct device_node *np,
 			break;
 		} else if (name && index >= 0) {
 			if (PTR_ERR(clk) != -EPROBE_DEFER)
-				pr_err("ERROR: could not get clock %s:%s(%i)\n",
-					np->full_name, name ? name : "", index);
+				pr_err("ERROR: could not get clock %pOF:%s(%i)\n",
+					np, name ? name : "", index);
 			return clk;
 		}
 
@@ -199,7 +196,7 @@ struct clk *clk_get(struct device *dev, const char *con_id)
 	const char *dev_id = dev ? dev_name(dev) : NULL;
 	struct clk *clk;
 
-	if (dev) {
+	if (dev && dev->of_node) {
 		clk = __of_clk_get_by_name(dev->of_node, dev_id, con_id);
 		if (!IS_ERR(clk) || PTR_ERR(clk) == -EPROBE_DEFER)
 			return clk;
@@ -250,13 +247,13 @@ struct clk_lookup_alloc {
 	char	con_id[MAX_CON_ID];
 };
 
-static struct clk_lookup * __init_refok
+static struct clk_lookup * __ref
 vclkdev_alloc(struct clk_hw *hw, const char *con_id, const char *dev_fmt,
 	va_list ap)
 {
 	struct clk_lookup_alloc *cla;
 
-	cla = __clkdev_alloc(sizeof(*cla));
+	cla = kzalloc(sizeof(*cla), GFP_KERNEL);
 	if (!cla)
 		return NULL;
 
@@ -287,7 +284,7 @@ vclkdev_create(struct clk_hw *hw, const char *con_id, const char *dev_fmt,
 	return cl;
 }
 
-struct clk_lookup * __init_refok
+struct clk_lookup * __ref
 clkdev_alloc(struct clk *clk, const char *con_id, const char *dev_fmt, ...)
 {
 	struct clk_lookup *cl;
@@ -448,11 +445,19 @@ EXPORT_SYMBOL(clk_register_clkdev);
  *
  * con_id or dev_id may be NULL as a wildcard, just as in the rest of
  * clkdev.
+ *
+ * To make things easier for mass registration, we detect error clk_hws
+ * from a previous clk_hw_register_*() call, and return the error code for
+ * those.  This is to permit this function to be called immediately
+ * after clk_hw_register_*().
  */
 int clk_hw_register_clkdev(struct clk_hw *hw, const char *con_id,
 	const char *dev_id)
 {
 	struct clk_lookup *cl;
+
+	if (IS_ERR(hw))
+		return PTR_ERR(hw);
 
 	/*
 	 * Since dev_id can be NULL, and NULL is handled specially, we must

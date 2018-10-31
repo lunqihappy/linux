@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 #include <linux/cpumask.h>
 #include <linux/interrupt.h>
 
@@ -8,7 +9,6 @@
 #include <linux/mc146818rtc.h>
 #include <linux/cache.h>
 #include <linux/cpu.h>
-#include <linux/module.h>
 
 #include <asm/smp.h>
 #include <asm/mtrr.h>

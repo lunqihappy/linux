@@ -13,11 +13,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110,
- * USA
- *
  * The full GNU General Public License is included in this distribution
  * in the file called COPYING.
  *
@@ -94,10 +89,14 @@ static int iwl_send_scan_abort(struct iwl_priv *priv)
 
 static void iwl_complete_scan(struct iwl_priv *priv, bool aborted)
 {
+	struct cfg80211_scan_info info = {
+		.aborted = aborted,
+	};
+
 	/* check if scan was requested from mac80211 */
 	if (priv->scan_request) {
 		IWL_DEBUG_SCAN(priv, "Complete scan in mac80211\n");
-		ieee80211_scan_completed(priv->hw, aborted);
+		ieee80211_scan_completed(priv->hw, &info);
 	}
 
 	priv->scan_type = IWL_SCAN_NORMAL;

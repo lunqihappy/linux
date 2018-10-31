@@ -25,14 +25,12 @@ struct g2d_dev {
 	struct mutex		mutex;
 	spinlock_t		ctrl_lock;
 	atomic_t		num_inst;
-	struct vb2_alloc_ctx	*alloc_ctx;
 	void __iomem		*regs;
 	struct clk		*clk;
 	struct clk		*gate;
 	struct g2d_ctx		*curr;
 	struct g2d_variant	*variant;
 	int irq;
-	wait_queue_head_t	irq_queue;
 };
 
 struct g2d_frame {

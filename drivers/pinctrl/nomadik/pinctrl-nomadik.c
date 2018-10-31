@@ -11,14 +11,13 @@
  * published by the Free Software Foundation.
  */
 #include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/init.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
 #include <linux/clk.h>
 #include <linux/err.h>
-#include <linux/gpio.h>
+#include <linux/gpio/driver.h>
 #include <linux/spinlock.h>
 #include <linux/interrupt.h>
 #include <linux/slab.h>
@@ -204,7 +203,7 @@ typedef unsigned long pin_cfg_t;
 
 #define GPIO_BLOCK_SHIFT 5
 #define NMK_GPIO_PER_CHIP (1 << GPIO_BLOCK_SHIFT)
-#define NMK_MAX_BANKS DIV_ROUND_UP(ARCH_NR_GPIOS, NMK_GPIO_PER_CHIP)
+#define NMK_MAX_BANKS DIV_ROUND_UP(512, NMK_GPIO_PER_CHIP)
 
 /* Register in the logic block */
 #define NMK_GPIO_DAT	0x00
@@ -414,7 +413,7 @@ nmk_gpio_disable_lazy_irq(struct nmk_gpio_chip *nmk_chip, unsigned offset)
 	u32 falling = nmk_chip->fimsc & BIT(offset);
 	u32 rising = nmk_chip->rimsc & BIT(offset);
 	int gpio = nmk_chip->chip.base + offset;
-	int irq = irq_find_mapping(nmk_chip->chip.irqdomain, offset);
+	int irq = irq_find_mapping(nmk_chip->chip.irq.domain, offset);
 	struct irq_data *d = irq_get_irq_data(irq);
 
 	if (!rising && !falling)
@@ -816,7 +815,7 @@ static void __nmk_gpio_irq_handler(struct irq_desc *desc, u32 status)
 	while (status) {
 		int bit = __ffs(status);
 
-		generic_handle_irq(irq_find_mapping(chip->irqdomain, bit));
+		generic_handle_irq(irq_find_mapping(chip->irq.domain, bit));
 		status &= ~BIT(bit);
 	}
 
@@ -972,7 +971,7 @@ static void nmk_gpio_dbg_show_one(struct seq_file *s,
 			   data_out ? "hi" : "lo",
 			   (mode < 0) ? "unknown" : modes[mode]);
 	} else {
-		int irq = gpio_to_irq(gpio);
+		int irq = chip->to_irq(chip, offset);
 		struct irq_desc	*desc = irq_to_desc(irq);
 		int pullidx = 0;
 		int val;
@@ -1033,102 +1032,6 @@ static inline void nmk_gpio_dbg_show_one(struct seq_file *s,
 #define nmk_gpio_dbg_show	NULL
 #endif
 
-void nmk_gpio_clocks_enable(void)
-{
-	int i;
-
-	for (i = 0; i < NUM_BANKS; i++) {
-		struct nmk_gpio_chip *chip = nmk_gpio_chips[i];
-
-		if (!chip)
-			continue;
-
-		clk_enable(chip->clk);
-	}
-}
-
-void nmk_gpio_clocks_disable(void)
-{
-	int i;
-
-	for (i = 0; i < NUM_BANKS; i++) {
-		struct nmk_gpio_chip *chip = nmk_gpio_chips[i];
-
-		if (!chip)
-			continue;
-
-		clk_disable(chip->clk);
-	}
-}
-
-/*
- * Called from the suspend/resume path to only keep the real wakeup interrupts
- * (those that have had set_irq_wake() called on them) as wakeup interrupts,
- * and not the rest of the interrupts which we needed to have as wakeups for
- * cpuidle.
- *
- * PM ops are not used since this needs to be done at the end, after all the
- * other drivers are done with their suspend callbacks.
- */
-void nmk_gpio_wakeups_suspend(void)
-{
-	int i;
-
-	for (i = 0; i < NUM_BANKS; i++) {
-		struct nmk_gpio_chip *chip = nmk_gpio_chips[i];
-
-		if (!chip)
-			break;
-
-		clk_enable(chip->clk);
-
-		writel(chip->rwimsc & chip->real_wake,
-		       chip->addr + NMK_GPIO_RWIMSC);
-		writel(chip->fwimsc & chip->real_wake,
-		       chip->addr + NMK_GPIO_FWIMSC);
-
-		clk_disable(chip->clk);
-	}
-}
-
-void nmk_gpio_wakeups_resume(void)
-{
-	int i;
-
-	for (i = 0; i < NUM_BANKS; i++) {
-		struct nmk_gpio_chip *chip = nmk_gpio_chips[i];
-
-		if (!chip)
-			break;
-
-		clk_enable(chip->clk);
-
-		writel(chip->rwimsc, chip->addr + NMK_GPIO_RWIMSC);
-		writel(chip->fwimsc, chip->addr + NMK_GPIO_FWIMSC);
-
-		clk_disable(chip->clk);
-	}
-}
-
-/*
- * Read the pull up/pull down status.
- * A bit set in 'pull_up' means that pull up
- * is selected if pull is enabled in PDIS register.
- * Note: only pull up/down set via this driver can
- * be detected due to HW limitations.
- */
-void nmk_gpio_read_pull(int gpio_bank, u32 *pull_up)
-{
-	if (gpio_bank < NUM_BANKS) {
-		struct nmk_gpio_chip *chip = nmk_gpio_chips[gpio_bank];
-
-		if (!chip)
-			return;
-
-		*pull_up = chip->pull_up;
-	}
-}
-
 /*
  * We will allocate memory for the state container using devm* allocators
  * binding to the first device reaching this point, it doesn't matter if
@@ -1148,7 +1051,7 @@ static struct nmk_gpio_chip *nmk_gpio_populate_chip(struct device_node *np,
 
 	gpio_pdev = of_find_device_by_node(np);
 	if (!gpio_pdev) {
-		pr_err("populate \"%s\": device not found\n", np->name);
+		pr_err("populate \"%pOFn\": device not found\n", np);
 		return ERR_PTR(-ENODEV);
 	}
 	if (of_property_read_u32(np, "gpio-bank", &id)) {
@@ -1175,7 +1078,7 @@ static struct nmk_gpio_chip *nmk_gpio_populate_chip(struct device_node *np,
 	res = platform_get_resource(gpio_pdev, IORESOURCE_MEM, 0);
 	base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(base))
-		return base;
+		return ERR_CAST(base);
 	nmk_chip->addr = base;
 
 	clk = clk_get(&gpio_pdev->dev, NULL);
@@ -1206,10 +1109,8 @@ static int nmk_gpio_probe(struct platform_device *dev)
 		return PTR_ERR(nmk_chip);
 	}
 
-	if (of_get_property(np, "st,supports-sleepmode", NULL))
-		supports_sleepmode = true;
-	else
-		supports_sleepmode = false;
+	supports_sleepmode =
+		of_property_read_bool(np, "st,supports-sleepmode");
 
 	/* Correct platform device ID */
 	dev->id = nmk_chip->bank;
@@ -1276,7 +1177,7 @@ static int nmk_gpio_probe(struct platform_device *dev)
 				   irqchip,
 				   0,
 				   handle_edge_irq,
-				   IRQ_TYPE_EDGE_FALLING);
+				   IRQ_TYPE_NONE);
 	if (ret) {
 		dev_err(&dev->dev, "could not add irqchip\n");
 		gpiochip_remove(&nmk_chip->chip);
@@ -2003,8 +1904,8 @@ static int nmk_pinctrl_probe(struct platform_device *pdev)
 		gpio_np = of_parse_phandle(np, "nomadik-gpio-chips", i);
 		if (gpio_np) {
 			dev_info(&pdev->dev,
-				 "populate NMK GPIO %d \"%s\"\n",
-				 i, gpio_np->name);
+				 "populate NMK GPIO %d \"%pOFn\"\n",
+				 i, gpio_np);
 			nmk_chip = nmk_gpio_populate_chip(gpio_np, pdev);
 			if (IS_ERR(nmk_chip))
 				dev_err(&pdev->dev,
@@ -2081,7 +1982,3 @@ static int __init nmk_pinctrl_init(void)
 	return platform_driver_register(&nmk_pinctrl_driver);
 }
 core_initcall(nmk_pinctrl_init);
-
-MODULE_AUTHOR("Prafulla WADASKAR and Alessandro Rubini");
-MODULE_DESCRIPTION("Nomadik GPIO Driver");
-MODULE_LICENSE("GPL");

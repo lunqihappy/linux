@@ -89,15 +89,11 @@ unsigned int mmc_status(struct device *dev)
 static struct mmci_platform_data mmc0_plat_data = {
 	.ocr_mask	= MMC_VDD_32_33|MMC_VDD_33_34,
 	.status		= mmc_status,
-	.gpio_wp	= -1,
-	.gpio_cd	= -1,
 };
 
 static struct mmci_platform_data mmc1_plat_data = {
 	.ocr_mask	= MMC_VDD_32_33|MMC_VDD_33_34,
 	.status		= mmc_status,
-	.gpio_wp	= -1,
-	.gpio_cd	= -1,
 };
 
 /*
@@ -344,8 +340,7 @@ static void __init versatile_dt_init(void)
 
 	versatile_dt_pci_init();
 
-	of_platform_populate(NULL, of_default_bus_match_table,
-			     versatile_auxdata_lookup, NULL);
+	of_platform_default_populate(NULL, versatile_auxdata_lookup, NULL);
 }
 
 static const char *const versatile_dt_match[] __initconst = {

@@ -42,28 +42,20 @@ static const struct ad7606_bus_ops ad7606_spi_bops = {
 
 static int ad7606_spi_probe(struct spi_device *spi)
 {
-	struct iio_dev *indio_dev;
+	const struct spi_device_id *id = spi_get_device_id(spi);
 
-	indio_dev = ad7606_probe(&spi->dev, spi->irq, NULL,
-				 spi_get_device_id(spi)->driver_data,
-				 &ad7606_spi_bops);
-
-	if (IS_ERR(indio_dev))
-		return PTR_ERR(indio_dev);
-
-	spi_set_drvdata(spi, indio_dev);
-
-	return 0;
+	return ad7606_probe(&spi->dev, spi->irq, NULL,
+			    id->name, id->driver_data,
+			    &ad7606_spi_bops);
 }
 
 static int ad7606_spi_remove(struct spi_device *spi)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(&spi->dev);
-
-	return ad7606_remove(indio_dev, spi->irq);
+	return ad7606_remove(&spi->dev, spi->irq);
 }
 
 static const struct spi_device_id ad7606_id[] = {
+	{"ad7605-4", ID_AD7605_4},
 	{"ad7606-8", ID_AD7606_8},
 	{"ad7606-6", ID_AD7606_6},
 	{"ad7606-4", ID_AD7606_4},
@@ -82,6 +74,6 @@ static struct spi_driver ad7606_driver = {
 };
 module_spi_driver(ad7606_driver);
 
-MODULE_AUTHOR("Michael Hennerich <hennerich@blackfin.uclinux.org>");
+MODULE_AUTHOR("Michael Hennerich <michael.hennerich@analog.com>");
 MODULE_DESCRIPTION("Analog Devices AD7606 ADC");
 MODULE_LICENSE("GPL v2");

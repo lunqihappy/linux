@@ -166,7 +166,6 @@ void jfs_evict_inode(struct inode *inode)
 			/*
 			 * Free the inode from the quota allocation.
 			 */
-			dquot_initialize(inode);
 			dquot_free_inode(inode);
 		}
 	} else {
@@ -403,7 +402,7 @@ void jfs_truncate_nolock(struct inode *ip, loff_t length)
 			break;
 		}
 
-		ip->i_mtime = ip->i_ctime = CURRENT_TIME;
+		ip->i_mtime = ip->i_ctime = current_time(ip);
 		mark_inode_dirty(ip);
 
 		txCommit(tid, 1, &ip, 0);

@@ -35,6 +35,7 @@ nvkm_subdev_name[NVKM_SUBDEV_NR] = {
 	[NVKM_SUBDEV_BUS     ] = "bus",
 	[NVKM_SUBDEV_CLK     ] = "clk",
 	[NVKM_SUBDEV_DEVINIT ] = "devinit",
+	[NVKM_SUBDEV_FAULT   ] = "fault",
 	[NVKM_SUBDEV_FB      ] = "fb",
 	[NVKM_SUBDEV_FUSE    ] = "fuse",
 	[NVKM_SUBDEV_GPIO    ] = "gpio",
@@ -57,6 +58,12 @@ nvkm_subdev_name[NVKM_SUBDEV_NR] = {
 	[NVKM_ENGINE_CE0     ] = "ce0",
 	[NVKM_ENGINE_CE1     ] = "ce1",
 	[NVKM_ENGINE_CE2     ] = "ce2",
+	[NVKM_ENGINE_CE3     ] = "ce3",
+	[NVKM_ENGINE_CE4     ] = "ce4",
+	[NVKM_ENGINE_CE5     ] = "ce5",
+	[NVKM_ENGINE_CE6     ] = "ce6",
+	[NVKM_ENGINE_CE7     ] = "ce7",
+	[NVKM_ENGINE_CE8     ] = "ce8",
 	[NVKM_ENGINE_CIPHER  ] = "cipher",
 	[NVKM_ENGINE_DISP    ] = "disp",
 	[NVKM_ENGINE_DMAOBJ  ] = "dma",
@@ -71,9 +78,11 @@ nvkm_subdev_name[NVKM_SUBDEV_NR] = {
 	[NVKM_ENGINE_MSVLD   ] = "msvld",
 	[NVKM_ENGINE_NVENC0  ] = "nvenc0",
 	[NVKM_ENGINE_NVENC1  ] = "nvenc1",
+	[NVKM_ENGINE_NVENC2  ] = "nvenc2",
 	[NVKM_ENGINE_NVDEC   ] = "nvdec",
 	[NVKM_ENGINE_PM      ] = "pm",
 	[NVKM_ENGINE_SEC     ] = "sec",
+	[NVKM_ENGINE_SEC2    ] = "sec2",
 	[NVKM_ENGINE_SW      ] = "sw",
 	[NVKM_ENGINE_VIC     ] = "vic",
 	[NVKM_ENGINE_VP      ] = "vp",
@@ -84,6 +93,14 @@ nvkm_subdev_intr(struct nvkm_subdev *subdev)
 {
 	if (subdev->func->intr)
 		subdev->func->intr(subdev);
+}
+
+int
+nvkm_subdev_info(struct nvkm_subdev *subdev, u64 mthd, u64 *data)
+{
+	if (subdev->func->info)
+		return subdev->func->info(subdev, mthd, data);
+	return -ENOSYS;
 }
 
 int
@@ -105,7 +122,7 @@ nvkm_subdev_fini(struct nvkm_subdev *subdev, bool suspend)
 		}
 	}
 
-	nvkm_mc_reset(device->mc, subdev->index);
+	nvkm_mc_reset(device, subdev->index);
 
 	time = ktime_to_us(ktime_get()) - time;
 	nvkm_trace(subdev, "%s completed in %lldus\n", action, time);

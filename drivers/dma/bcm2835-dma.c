@@ -251,8 +251,11 @@ static void bcm2835_dma_create_cb_set_length(
 	 */
 
 	/* have we filled in period_length yet? */
-	if (*total_len + control_block->length < period_len)
+	if (*total_len + control_block->length < period_len) {
+		/* update number of bytes in this period so far */
+		*total_len += control_block->length;
 		return;
+	}
 
 	/* calculate the length that remains to reach period_length */
 	control_block->length = period_len - *total_len;
@@ -393,11 +396,12 @@ static void bcm2835_dma_fill_cb_chain_with_sg(
 	unsigned int sg_len)
 {
 	struct bcm2835_chan *c = to_bcm2835_dma_chan(chan);
-	size_t max_len = bcm2835_dma_max_frame_length(c);
-	unsigned int i, len;
+	size_t len, max_len;
+	unsigned int i;
 	dma_addr_t addr;
 	struct scatterlist *sgent;
 
+	max_len = bcm2835_dma_max_frame_length(c);
 	for_each_sg(sgl, sgent, sg_len, i) {
 		for (addr = sg_dma_address(sgent), len = sg_dma_len(sgent);
 		     len > 0;
@@ -613,7 +617,7 @@ static void bcm2835_dma_issue_pending(struct dma_chan *chan)
 	spin_unlock_irqrestore(&c->vc.lock, flags);
 }
 
-struct dma_async_tx_descriptor *bcm2835_dma_prep_dma_memcpy(
+static struct dma_async_tx_descriptor *bcm2835_dma_prep_dma_memcpy(
 	struct dma_chan *chan, dma_addr_t dst, dma_addr_t src,
 	size_t len, unsigned long flags)
 {
@@ -774,14 +778,6 @@ static int bcm2835_dma_slave_config(struct dma_chan *chan,
 {
 	struct bcm2835_chan *c = to_bcm2835_dma_chan(chan);
 
-	if ((cfg->direction == DMA_DEV_TO_MEM &&
-	     cfg->src_addr_width != DMA_SLAVE_BUSWIDTH_4_BYTES) ||
-	    (cfg->direction == DMA_MEM_TO_DEV &&
-	     cfg->dst_addr_width != DMA_SLAVE_BUSWIDTH_4_BYTES) ||
-	    !is_slave_direction(cfg->direction)) {
-		return -EINVAL;
-	}
-
 	c->cfg = *cfg;
 
 	return 0;
@@ -808,7 +804,7 @@ static int bcm2835_dma_terminate_all(struct dma_chan *chan)
 	 * c->desc is NULL and exit.)
 	 */
 	if (c->desc) {
-		bcm2835_dma_desc_free(&c->desc->vd);
+		vchan_terminate_vdesc(&c->desc->vd);
 		c->desc = NULL;
 		bcm2835_dma_abort(c->chan_base);
 
@@ -830,6 +826,13 @@ static int bcm2835_dma_terminate_all(struct dma_chan *chan)
 	vchan_dma_desc_free_list(&c->vc, &head);
 
 	return 0;
+}
+
+static void bcm2835_dma_synchronize(struct dma_chan *chan)
+{
+	struct bcm2835_chan *c = to_bcm2835_dma_chan(chan);
+
+	vchan_synchronize(&c->vc);
 }
 
 static int bcm2835_dma_chan_init(struct bcm2835_dmadev *d, int chan_id,
@@ -938,6 +941,7 @@ static int bcm2835_dma_probe(struct platform_device *pdev)
 	od->ddev.device_prep_dma_memcpy = bcm2835_dma_prep_dma_memcpy;
 	od->ddev.device_config = bcm2835_dma_slave_config;
 	od->ddev.device_terminate_all = bcm2835_dma_terminate_all;
+	od->ddev.device_synchronize = bcm2835_dma_synchronize;
 	od->ddev.src_addr_widths = BIT(DMA_SLAVE_BUSWIDTH_4_BYTES);
 	od->ddev.dst_addr_widths = BIT(DMA_SLAVE_BUSWIDTH_4_BYTES);
 	od->ddev.directions = BIT(DMA_DEV_TO_MEM) | BIT(DMA_MEM_TO_DEV) |

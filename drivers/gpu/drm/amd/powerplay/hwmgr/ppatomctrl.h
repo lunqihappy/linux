@@ -146,6 +146,14 @@ struct pp_atomctrl_memory_clock_param {
 };
 typedef struct pp_atomctrl_memory_clock_param pp_atomctrl_memory_clock_param;
 
+struct pp_atomctrl_memory_clock_param_ai {
+	uint32_t ulClock;
+	uint32_t ulPostDiv;
+	uint16_t ulMclk_fcw_frac;
+	uint16_t ulMclk_fcw_int;
+};
+typedef struct pp_atomctrl_memory_clock_param_ai pp_atomctrl_memory_clock_param_ai;
+
 struct pp_atomctrl_internal_ss_info {
 	uint32_t speed_spectrum_percentage;                      /* in 1/100 percentage */
 	uint32_t speed_spectrum_rate;                            /* in KHz */
@@ -281,6 +289,7 @@ struct pp_atom_ctrl__avfs_parameters {
 
 extern bool atomctrl_get_pp_assign_pin(struct pp_hwmgr *hwmgr, const uint32_t pinId, pp_atomctrl_gpio_pin_assignment *gpio_pin_assignment);
 extern int atomctrl_get_voltage_evv_on_sclk(struct pp_hwmgr *hwmgr, uint8_t voltage_type, uint32_t sclk, uint16_t virtual_voltage_Id, uint16_t *voltage);
+extern int atomctrl_get_voltage_evv(struct pp_hwmgr *hwmgr, uint16_t virtual_voltage_id, uint16_t *voltage);
 extern uint32_t atomctrl_get_mpll_reference_clock(struct pp_hwmgr *hwmgr);
 extern int atomctrl_get_memory_clock_spread_spectrum(struct pp_hwmgr *hwmgr, const uint32_t memory_clock, pp_atomctrl_internal_ss_info *ssInfo);
 extern int atomctrl_get_engine_clock_spread_spectrum(struct pp_hwmgr *hwmgr, const uint32_t engine_clock, pp_atomctrl_internal_ss_info *ssInfo);
@@ -290,14 +299,16 @@ extern uint32_t atomctrl_get_reference_clock(struct pp_hwmgr *hwmgr);
 extern int atomctrl_get_memory_pll_dividers_si(struct pp_hwmgr *hwmgr, uint32_t clock_value, pp_atomctrl_memory_clock_param *mpll_param, bool strobe_mode);
 extern int atomctrl_get_engine_pll_dividers_vi(struct pp_hwmgr *hwmgr, uint32_t clock_value, pp_atomctrl_clock_dividers_vi *dividers);
 extern int atomctrl_get_dfs_pll_dividers_vi(struct pp_hwmgr *hwmgr, uint32_t clock_value, pp_atomctrl_clock_dividers_vi *dividers);
-extern bool atomctrl_is_voltage_controled_by_gpio_v3(struct pp_hwmgr *hwmgr, uint8_t voltage_type, uint8_t voltage_mode);
+extern bool atomctrl_is_voltage_controlled_by_gpio_v3(struct pp_hwmgr *hwmgr, uint8_t voltage_type, uint8_t voltage_mode);
 extern int atomctrl_get_voltage_table_v3(struct pp_hwmgr *hwmgr, uint8_t voltage_type, uint8_t voltage_mode, pp_atomctrl_voltage_table *voltage_table);
 extern int atomctrl_get_memory_pll_dividers_vi(struct pp_hwmgr *hwmgr,
 		uint32_t clock_value, pp_atomctrl_memory_clock_param *mpll_param);
+extern int atomctrl_get_memory_pll_dividers_ai(struct pp_hwmgr *hwmgr,
+		uint32_t clock_value, pp_atomctrl_memory_clock_param_ai *mpll_param);
 extern int atomctrl_get_engine_pll_dividers_kong(struct pp_hwmgr *hwmgr,
 						 uint32_t clock_value,
 						 pp_atomctrl_clock_dividers_kong *dividers);
-extern int atomctrl_read_efuse(void *device, uint16_t start_index,
+extern int atomctrl_read_efuse(struct pp_hwmgr *hwmgr, uint16_t start_index,
 		uint16_t end_index, uint32_t mask, uint32_t *efuse);
 extern int atomctrl_calculate_voltage_evv_on_sclk(struct pp_hwmgr *hwmgr, uint8_t voltage_type,
 		uint32_t sclk, uint16_t virtual_voltage_Id, uint16_t *voltage, uint16_t dpm_level, bool debug);
@@ -305,10 +316,22 @@ extern int atomctrl_get_engine_pll_dividers_ai(struct pp_hwmgr *hwmgr, uint32_t 
 extern int atomctrl_set_ac_timing_ai(struct pp_hwmgr *hwmgr, uint32_t memory_clock,
 								uint8_t level);
 extern int atomctrl_get_voltage_evv_on_sclk_ai(struct pp_hwmgr *hwmgr, uint8_t voltage_type,
-				uint32_t sclk, uint16_t virtual_voltage_Id, uint16_t *voltage);
+				uint32_t sclk, uint16_t virtual_voltage_Id, uint32_t *voltage);
 extern int atomctrl_get_smc_sclk_range_table(struct pp_hwmgr *hwmgr, struct pp_atom_ctrl_sclk_range_table *table);
 
 extern int atomctrl_get_avfs_information(struct pp_hwmgr *hwmgr, struct pp_atom_ctrl__avfs_parameters *param);
 
+extern int  atomctrl_get_svi2_info(struct pp_hwmgr *hwmgr, uint8_t voltage_type,
+				uint8_t *svd_gpio_id, uint8_t *svc_gpio_id,
+				uint16_t *load_line);
+
+extern int atomctrl_get_leakage_vddc_base_on_leakage(struct pp_hwmgr *hwmgr,
+					uint16_t *vddc, uint16_t *vddci,
+					uint16_t virtual_voltage_id,
+					uint16_t efuse_voltage_id);
+extern int atomctrl_get_leakage_id_from_efuse(struct pp_hwmgr *hwmgr, uint16_t *virtual_voltage_id);
+
+extern void atomctrl_get_voltage_range(struct pp_hwmgr *hwmgr, uint32_t *max_vddc,
+							uint32_t *min_vddc);
 #endif
 

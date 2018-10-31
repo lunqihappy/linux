@@ -16,7 +16,7 @@
 #include <linux/oid_registry.h>
 #include <crypto/pkcs7.h>
 #include "verify_pefile.h"
-#include "mscode-asn1.h"
+#include "mscode.asn1.h"
 
 /*
  * Parse a Microsoft Individual Code Signing blob
@@ -124,5 +124,10 @@ int mscode_note_digest(void *context, size_t hdrlen,
 	struct pefile_context *ctx = context;
 
 	ctx->digest = kmemdup(value, vlen, GFP_KERNEL);
-	return ctx->digest ? 0 : -ENOMEM;
+	if (!ctx->digest)
+		return -ENOMEM;
+
+	ctx->digest_len = vlen;
+
+	return 0;
 }

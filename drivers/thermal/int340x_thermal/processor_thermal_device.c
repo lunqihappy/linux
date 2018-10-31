@@ -30,6 +30,10 @@
 /* Skylake thermal reporting device */
 #define PCI_DEVICE_ID_PROC_SKL_THERMAL	0x1903
 
+/* CannonLake thermal reporting device */
+#define PCI_DEVICE_ID_PROC_CNL_THERMAL	0x5a03
+#define PCI_DEVICE_ID_PROC_CFL_THERMAL	0x3E83
+
 /* Braswell thermal reporting device */
 #define PCI_DEVICE_ID_PROC_BSW_THERMAL	0x22DC
 
@@ -38,6 +42,9 @@
 #define PCI_DEVICE_ID_PROC_BXT1_THERMAL  0x1A8C
 #define PCI_DEVICE_ID_PROC_BXTX_THERMAL  0x4A8C
 #define PCI_DEVICE_ID_PROC_BXTP_THERMAL  0x5A8C
+
+/* GeminiLake thermal reporting device */
+#define PCI_DEVICE_ID_PROC_GLK_THERMAL	0x318C
 
 struct power_config {
 	u32	index;
@@ -127,7 +134,7 @@ static struct attribute *power_limit_attrs[] = {
 	NULL
 };
 
-static struct attribute_group power_limit_attribute_group = {
+static const struct attribute_group power_limit_attribute_group = {
 	.attrs = power_limit_attrs,
 	.name = "power_limits"
 };
@@ -258,7 +265,8 @@ static void proc_thermal_notify(acpi_handle handle, u32 event, void *data)
 	switch (event) {
 	case PROC_POWER_CAPABILITY_CHANGED:
 		proc_thermal_read_ppcc(proc_priv);
-		int340x_thermal_zone_device_update(proc_priv->int340x_zone);
+		int340x_thermal_zone_device_update(proc_priv->int340x_zone,
+				THERMAL_DEVICE_POWER_CAPABILITY_CHANGED);
 		break;
 	default:
 		dev_err(proc_priv->dev, "Unsupported event [0x%x]\n", event);
@@ -460,6 +468,9 @@ static const struct pci_device_id proc_thermal_pci_ids[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_PROC_BXT1_THERMAL)},
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_PROC_BXTX_THERMAL)},
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_PROC_BXTP_THERMAL)},
+	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_PROC_CNL_THERMAL)},
+	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_PROC_CFL_THERMAL)},
+	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_PROC_GLK_THERMAL)},
 	{ 0, },
 };
 

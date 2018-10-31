@@ -231,7 +231,7 @@ static int stmp3xxx_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alm)
 	return 0;
 }
 
-static struct rtc_class_ops stmp3xxx_rtc_ops = {
+static const struct rtc_class_ops stmp3xxx_rtc_ops = {
 	.alarm_irq_enable =
 			  stmp3xxx_alarm_irq_enable,
 	.read_time	= stmp3xxx_rtc_gettime,
@@ -288,10 +288,22 @@ static int stmp3xxx_rtc_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, rtc_data);
 
-	err = stmp_reset_block(rtc_data->io);
-	if (err) {
-		dev_err(&pdev->dev, "stmp_reset_block failed: %d\n", err);
-		return err;
+	/*
+	 * Resetting the rtc stops the watchdog timer that is potentially
+	 * running. So (assuming it is running on purpose) don't reset if the
+	 * watchdog is enabled.
+	 */
+	if (readl(rtc_data->io + STMP3XXX_RTC_CTRL) &
+	    STMP3XXX_RTC_CTRL_WATCHDOGEN) {
+		dev_info(&pdev->dev,
+			 "Watchdog is running, skip resetting rtc\n");
+	} else {
+		err = stmp_reset_block(rtc_data->io);
+		if (err) {
+			dev_err(&pdev->dev, "stmp_reset_block failed: %d\n",
+				err);
+			return err;
+		}
 	}
 
 	/*

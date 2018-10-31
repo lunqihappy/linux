@@ -409,7 +409,6 @@ static int stk3310_write_raw(struct iio_dev *indio_dev,
 }
 
 static const struct iio_info stk3310_info = {
-	.driver_module		= THIS_MODULE,
 	.read_raw		= stk3310_read_raw,
 	.write_raw		= stk3310_write_raw,
 	.attrs			= &stk3310_attribute_group,
@@ -528,7 +527,7 @@ static irqreturn_t stk3310_irq_handler(int irq, void *private)
 	struct iio_dev *indio_dev = private;
 	struct stk3310_data *data = iio_priv(indio_dev);
 
-	data->timestamp = iio_get_time_ns();
+	data->timestamp = iio_get_time_ns(indio_dev);
 
 	return IRQ_WAKE_THREAD;
 }
